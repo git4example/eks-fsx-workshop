@@ -70,7 +70,7 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
   FSxONTAPRouteTable:
     Description: Choose your preferred route table for FSxONTAP file system, please key in all the route tables that your compute nodes sit, separated by comma (no space) for multiple entries
-    Type: String
+    Type: CommaDelimitedList
   StorageCapacity:
     Default: 1024
     Description: Specify the storage capacity of the file system being created, in gibibytes. Minimum 1024 GiB; Maximum 192 TiB.
@@ -254,11 +254,8 @@ Resources:
         DeploymentType: MULTI_AZ_1
         DiskIopsConfiguration:
           Mode: AUTOMATIC
-        PreferredSubnetId: !Ref Subnet1ID
-        RouteTableIds: !Split
-          #- !GetAtt FSxONTAPRouteTable.RouteTableId
-          - ","
-          - !Ref FSxONTAPRouteTable
+        PreferredSubnetId: !Ref Subnet1ID        
+        RouteTableIds: !Ref FSxONTAPRouteTable
         ThroughputCapacity: !Ref ThroughputCapacity
         WeeklyMaintenanceStartTime: !Ref WeeklyMaintenanceTime
         FsxAdminPassword: !Ref FsxAdminPassword

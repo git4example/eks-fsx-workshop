@@ -2,6 +2,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: "Security Groups For FSX OpenZFS"
 
 Parameters:
+  VpcId: 
+    Type: String
+    Description: "FSxZ VPC ID"
   SecurityGroupName: 
     Type: String
     Description: "FSx OpenZFS Security Group Name"
@@ -10,7 +13,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Ref SecurityGroupName
-      VpcId: myVpc
+      VpcId: !Ref VpcId
       GroupDescription: Security Group for FSx for OpenZFS Storage Access
       SecurityGroupIngress:
         - IpProtocol: tcp
