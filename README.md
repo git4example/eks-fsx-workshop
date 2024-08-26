@@ -282,12 +282,12 @@ SVM is also created.
 ## 5. Create needful resources for Amazon FSx for Lustre file system
 
 
-- Creating S3 bucket for FSx Luster in primary region
+- Creating S3 bucket for FSx Lustre in primary region
 
 ```bash
 random=`tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo ''`
-s3_bucket_name="fsx-luster-bucket-${random}"
-s3_2nd_bucket_name="fsx-luster-bucket-2ndregion-${random}"
+s3_bucket_name="fsx-lustre-bucket-${random}"
+s3_2nd_bucket_name="fsx-lustre-bucket-2ndregion-${random}"
 ```
 
 

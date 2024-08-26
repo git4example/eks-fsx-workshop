@@ -1060,8 +1060,8 @@ Resources:
               - aws eks update-kubeconfig --name FSx-eks-cluster --region {{ RegionName }}
               - random=`echo $RANDOM | md5sum | head -c 12; echo`
               - cd /eks-fsx-workshop/FSxCFN
-              - s3_bucket_name="fsx-luster-bucket-${random}"
-              - s3_2nd_bucket_name="fsx-luster-bucket-2ndregion-${random}"
+              - s3_bucket_name="fsx-lustre-bucket-${random}"
+              - s3_2nd_bucket_name="fsx-lustre-bucket-2ndregion-${random}"
               - echo "Creating S3 bucket ${s3_bucket_name}"
               - aws cloudformation create-stack --stack-name ${s3_bucket_name} --region {{ RegionName }} --template-body file://./S3Buckets.yaml --parameters ParameterKey=S3BucketName,ParameterValue=${s3_bucket_name} --capabilities CAPABILITY_NAMED_IAM 
               - echo "Creating S3 bucket ${s3_2nd_bucket_name}"
@@ -1120,7 +1120,7 @@ Resources:
               - aws cloudformation create-stack --stack-name FSxL-SecurityGroup-02 --region us-east-2 --template-body file://./fsxL-SecurityGroup.yaml --parameters ParameterKey=SecurityGroupName,ParameterValue=FSxLSecurityGroup02 --capabilities CAPABILITY_NAMED_IAM
               - sleep 120
               - SECURITY_GROUP_ID=$(aws cloudformation describe-stacks --stack-name FSxL-SecurityGroup-02 --region us-east-2 --query "Stacks[0].Outputs[0].OutputValue" --output text)
-              - S3_BUCKET=$(aws s3 ls |grep fsx-luster-bucket-2ndregion | awk '{print$3}')
+              - S3_BUCKET=$(aws s3 ls |grep fsx-lustre-bucket-2ndregion | awk '{print$3}')
               - echo "Creating IAM Role for Service Account for FSx for Lustre 2nd Cluster"
               - aws iam create-policy --policy-name Amazon_2nd_FSx_Lustre_CSI_Driver --region us-east-2 --policy-document file://fsx-csi-driver.json
               - eksctl create iamserviceaccount --name fsx-csi-controller-sa --namespace kube-system --cluster $CLUSTER_NAME --region us-east-2 --attach-policy-arn arn:aws:iam::$ACCOUNT_ID:policy/Amazon_2nd_FSx_Lustre_CSI_Driver --approve 
@@ -1138,7 +1138,7 @@ Resources:
               - ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
               - CLUSTER_NAME="FSx-eks-cluster02"
               - SECURITY_GROUP_ID=$(aws cloudformation describe-stacks --stack-name FSxL-SecurityGroup-02 --region us-east-2 --query "Stacks[0].Outputs[0].OutputValue" --output text)
-              - S3_BUCKET=$(aws s3 ls |grep fsx-luster-bucket-2ndregion | awk '{print$3}')
+              - S3_BUCKET=$(aws s3 ls |grep fsx-lustre-bucket-2ndregion | awk '{print$3}')
               - SUBNET_ID=$(aws eks describe-cluster --name $CLUSTER_NAME --region us-east-2 --query "cluster.resourcesVpcConfig.subnetIds[0]" --output text)
               # In futre To migrate on Pod Identity - currently fsx-csi-controller is not supporting it
               # To migrate on Pod Identity, we dont need to get role name for annotation 
