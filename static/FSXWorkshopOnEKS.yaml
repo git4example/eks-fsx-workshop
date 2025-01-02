@@ -1174,7 +1174,8 @@ Resources:
 
                   parameters = {}
                   for key, value in resource_properties.items():
-                      if key in ['NodeVersion', 'LinuxFlavor', 'VSCodePassword', 'DotNetVersion', 'PublicSubnet01', 'PublicSubnet02', 'PrivateSubnet01', 'PrivateSubnet02', 'VPCIdentifier', 'RegionName']:
+                      # Include all your SSM Doc Paramers here in this list
+                      if key in ['NodeVersion', 'LinuxFlavor', 'VSCodePassword', 'DotNetVersion', 'PublicSubnet01', 'PublicSubnet02', 'PrivateSubnet01', 'PrivateSubnet02', 'VPCIdentifier', 'PrimaryRegion', 'SecondaryRegion']:
                           parameters[key] = [value]
 
                   logger.debug(f'send_command parameters: {parameters}')
@@ -2343,7 +2344,8 @@ Resources:
       PublicSubnet02: !Ref PublicSubnet2
       PrivateSubnet01: !Ref PrivateSubnet1
       PrivateSubnet02: !Ref PrivateSubnet2
-      RegionName: !Sub "${AWS::Region}"
+      PrimaryRegion: !Sub "${AWS::Region}"
+      SecondaryRegion: !Ref SecondaryRegion
        
   CreatePrimaryEKSCluster:
     Type: AWS::SSM::Document
@@ -2374,9 +2376,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command     
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command           
         mainSteps:
         - action: aws:runShellScript
           name: CreatePrimaryEKSCluster
@@ -2385,10 +2390,10 @@ Resources:
               - !Sub |
                 #!/bin/bash
                 
-                echo "Current Region is: {{ RegionName }}"
+                echo "Current Region is: {{ PrimaryRegion }}"
                 
                 CLUSTER_NAME="FSx-eks-cluster"
-                REGION={{ RegionName }}
+                REGION={{ PrimaryRegion }}
                 
                 echo "Creating $CLUSTER_NAME in $REGION"
                 
@@ -2401,7 +2406,7 @@ Resources:
                   cd /home/${VSCodeUser}/environment/eks-fsx-workshop/static/eks
                   
                   # Update cluster configuration file
-                  sed -i "s/primary-region/{{ RegionName }}/g" cluster.yaml
+                  sed -i "s/primary-region/{{ PrimaryRegion }}/g" cluster.yaml
                   sed -i "s/vpc-id/{{ VPCIdentifier }}/g" cluster.yaml
                   sed -i "s/public-subnet-1/{{ PublicSubnet01 }}/g" cluster.yaml
                   sed -i "s/public-subnet-2/{{ PublicSubnet02 }}/g" cluster.yaml
@@ -2447,9 +2452,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command             
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command  
         mainSteps:
         - action: aws:runShellScript
           name: DeletePrimaryEKSCluster
@@ -2460,7 +2468,7 @@ Resources:
                 
                 # Delete EKS Cluster "FSx-eks-cluster"
                 CLUSTER_NAME="FSx-eks-cluster"
-                REGION={{ RegionName }}
+                REGION={{ PrimaryRegion }}
                 
                 echo "Attempting to delete $CLUSTER_NAME in $REGION"
                 
@@ -2497,7 +2505,8 @@ Resources:
       PublicSubnet02: !Ref PublicSubnet2
       PrivateSubnet01: !Ref PrivateSubnet1
       PrivateSubnet02: !Ref PrivateSubnet2
-      RegionName: !Sub "${AWS::Region}"
+      PrimaryRegion: !Sub "${AWS::Region}"
+      SecondaryRegion: !Ref SecondaryRegion
        
   CreateS3BucketsAndReplicationRole:
     Type: AWS::SSM::Document
@@ -2528,9 +2537,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command   
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command            
         mainSteps:
         - action: aws:runShellScript
           name: CreateS3BucketsAndReplicationRole
@@ -2547,33 +2559,34 @@ Resources:
                   
                   s3_bucket_name="fsx-lustre-bucket-$random"
                   s3_2nd_bucket_name="fsx-lustre-bucket-2ndregion-$random"
-                  
-                  # Create S3 bucket in 1st Region
-                  echo "Creating S3 bucket $s3_bucket_name"
-                  aws cloudformation create-stack --stack-name $s3_bucket_name \
-                    --region {{ RegionName }} \
-                    --template-body file://./S3Buckets.yaml \
-                    --parameters ParameterKey=S3BucketName,ParameterValue=$s3_bucket_name \
-                    --capabilities CAPABILITY_NAMED_IAM 
-                  
-                  # Create S3 bucket in 2nd Region
-                  echo "Creating S3 bucket $s3_2nd_bucket_name"
-                  aws cloudformation create-stack --stack-name $s3_2nd_bucket_name \
-                    --region us-east-2 \
-                    --template-body file://./S3Buckets.yaml \
-                    --parameters ParameterKey=S3BucketName,ParameterValue=$s3_2nd_bucket_name \
-                    --capabilities CAPABILITY_NAMED_IAM
-                  
+                                                  
                   # Create Cross Region Bucket replication role
                   echo "Creating IAM Role and Policy for S3 Cross Region Replication"
                   iam_role_name="s3-crr-$random"
                   sed -i "s/DOC-EXAMPLE-BUCKET1/$s3_bucket_name/g" S3ReplicationIAM.yaml
                   sed -i "s/DOC-EXAMPLE-BUCKET2/$s3_2nd_bucket_name/g" S3ReplicationIAM.yaml  
                   aws cloudformation create-stack --stack-name $iam_role_name \
-                    --region {{ RegionName }} \
+                    --region {{ PrimaryRegion }} \
                     --template-body file://./S3ReplicationIAM.yaml \
                     --parameters ParameterKey=IAMRoleName,ParameterValue=$iam_role_name \
                     --capabilities CAPABILITY_NAMED_IAM
+                  
+                   # Create S3 bucket in 1st Region
+                  echo "Creating S3 bucket $s3_bucket_name"
+                  aws cloudformation create-stack --stack-name $s3_bucket_name \
+                    --region {{ PrimaryRegion }} \
+                    --template-body file://./S3Buckets.yaml \
+                    --parameters ParameterKey=S3BucketName,ParameterValue=$s3_bucket_name \
+                    --capabilities CAPABILITY_NAMED_IAM 
+
+                  # Create S3 bucket in 2nd Region
+                  echo "Creating S3 bucket $s3_2nd_bucket_name"
+                  aws cloudformation create-stack --stack-name $s3_2nd_bucket_name \
+                    --region {{ SecondaryRegion }} \
+                    --template-body file://./S3Buckets.yaml \
+                    --parameters ParameterKey=S3BucketName,ParameterValue=$s3_2nd_bucket_name \
+                    --capabilities CAPABILITY_NAMED_IAM
+                                    
                 fi
     
   DeleteS3bucketsforFSxLustre:
@@ -2605,9 +2618,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command   
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command            
         mainSteps:
         - action: aws:runShellScript
           name: DeleteStacksWithRandomStrings
@@ -2637,15 +2653,15 @@ Resources:
                     fi
                   }
                   
+                  # Deleting "s3-crr-$random" stack
+                  delete_stack "s3-crr-$random_value" "{{ PrimaryRegion }}"
+
                   # Deleting "fsx-lustre-bucket-$random" stack
-                  delete_stack "fsx-lustre-bucket-$random_value" "{{ RegionName }}"
+                  delete_stack "fsx-lustre-bucket-$random_value" "{{ PrimaryRegion }}"
                   
                   # Deleting "fsx-lustre-bucket-2ndregion-$random" stack
-                  delete_stack "fsx-lustre-bucket-2ndregion-$random_value" "us-east-2"
+                  delete_stack "fsx-lustre-bucket-2ndregion-$random_value" "{{ SecondaryRegion }}"
                   
-                  # Deleting "s3-crr-$random" stack
-                  delete_stack "s3-crr-$random_value" "{{ RegionName }}"
-                
                 else
                   echo "Failed to retrieve random string from /home/${VSCodeUser}/.bashrc"
                 fi
@@ -2670,8 +2686,9 @@ Resources:
       PublicSubnet02: !Ref PublicSubnet2
       PrivateSubnet01: !Ref PrivateSubnet1
       PrivateSubnet02: !Ref PrivateSubnet2
-      RegionName: !Sub "${AWS::Region}"
-       
+      PrimaryRegion: !Sub "${AWS::Region}"
+      SecondaryRegion: !Ref SecondaryRegion
+
   CreateFSxLustreSecurityGroup:
     Type: AWS::SSM::Document
     Properties:
@@ -2701,9 +2718,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command           
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command    
         mainSteps:
         - action: aws:runShellScript
           name: CreateFSxLustreSecurityGroup
@@ -2714,29 +2734,21 @@ Resources:
                 
                 # Security Group for Lustre
                 STACK_NAME="FSxL-SecurityGroup-01"
-                REGION={{ RegionName }}
-                
+                REGION={{ PrimaryRegion }}
+                VPC_ID={{ VPCIdentifier }}
                 cd /home/${VSCodeUser}/environment/eks-fsx-workshop/static/FSxCFN
                 
-                echo "Creating Security Group for FSx for Lustre"
-                
-                # Backup original file
-                cp fsxL-SecurityGroup.yaml fsxL-SecurityGroup.yaml.bak
-                
-                # Replace VPC identifier
-                sed -i "s/myVpc/{{ VPCIdentifier }}/g" fsxL-SecurityGroup.yaml
-                
+                echo "Creating Security Group for FSx for Lustre in VPC $VPC_ID"
+                               
                 # Create CloudFormation stack
                 aws cloudformation create-stack \
                   --stack-name $STACK_NAME \
                   --region $REGION \
                   --template-body file://./fsxL-SecurityGroup.yaml \
-                  --parameters ParameterKey=SecurityGroupName,ParameterValue=FSxLSecurityGroup01 \
+                  --parameters \
+                  ParameterKey=VpcId,ParameterValue=$VPC_ID \
+                  ParameterKey=SecurityGroupName,ParameterValue=FSxLSecurityGroup01 \
                   --capabilities CAPABILITY_NAMED_IAM 
-                
-                # Clean up
-                rm -f fsxL-SecurityGroup.yaml
-                mv fsxL-SecurityGroup.yaml.bak fsxL-SecurityGroup.yaml
 
   DeleteFSxLustreSecurityGroup:
     Type: AWS::SSM::Document
@@ -2767,9 +2779,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command       
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command        
         mainSteps:
         - action: aws:runShellScript
           name: DeleteFSxLustreSecurityGroup
@@ -2780,7 +2795,7 @@ Resources:
                 
                 # Deleting "FSxL-SecurityGroup-01" stack
                 STACK_NAME="FSxL-SecurityGroup-01"
-                REGION={{ RegionName }}
+                REGION={{ PrimaryRegion }}
                 
                 echo "Deleting $STACK_NAME stack in $REGION"
                 
@@ -2814,7 +2829,8 @@ Resources:
       PublicSubnet02: !Ref PublicSubnet2
       PrivateSubnet01: !Ref PrivateSubnet1
       PrivateSubnet02: !Ref PrivateSubnet2
-      RegionName: !Sub "${AWS::Region}"
+      PrimaryRegion: !Sub "${AWS::Region}"
+      SecondaryRegion: !Ref SecondaryRegion
        
   CreateFSxOpenZFSSecurityGroup:
     Type: AWS::SSM::Document
@@ -2845,9 +2861,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command  
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command             
         mainSteps:
         - action: aws:runShellScript
           name: CreateFSxOpenZFSSecurityGroup
@@ -2857,31 +2876,23 @@ Resources:
                 #!/bin/bash
                 
                 STACK_NAME="fsxZ-SecurityGroup"
-                REGION={{ RegionName }}
-                
+                REGION={{ PrimaryRegion }}
+                VPC_ID={{ VPCIdentifier }}
                 cd /home/${VSCodeUser}/environment/eks-fsx-workshop/static/FSxCFN
                 
                 # Security Group for OpenZFS
-                echo "Creating Security Group for FSx for OpenZFS"
-                
-                # Backup original file
-                cp fsxZ-SecurityGroup.yaml fsxZ-SecurityGroup.yaml.bak
-                
-                # Replace VPC identifier
-                sed -i "s/myVpc/{{ VPCIdentifier }}/g" fsxZ-SecurityGroup.yaml
-                
+                echo "Creating Security Group for FSx for OpenZFS in VPC $VPC_ID"
+
                 # Create CloudFormation stack
                 aws cloudformation create-stack \
                   --stack-name $STACK_NAME \
                   --region $REGION \
                   --template-body file://./fsxZ-SecurityGroup.yaml \
-                  --parameters ParameterKey=SecurityGroupName,ParameterValue=FSxZSecurityGroup \
+                  --parameters \
+                  ParameterKey=VpcId,ParameterValue=$VPC_ID \
+                  ParameterKey=SecurityGroupName,ParameterValue=FSxZSecurityGroup \
                   --capabilities CAPABILITY_NAMED_IAM 
-                
-                # Clean up
-                rm -f fsxZ-SecurityGroup.yaml
-                mv fsxZ-SecurityGroup.yaml.bak fsxZ-SecurityGroup.yaml
-  
+                  
   DeleteFSxOpenZFSSecurityGroup:
     Type: AWS::SSM::Document
     Properties:
@@ -2911,9 +2922,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command  
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command             
         mainSteps:
         - action: aws:runShellScript
           name: DeleteFSxOpenZFSSecurityGroup
@@ -2923,7 +2937,7 @@ Resources:
                 #!/bin/bash
                 
                 STACK_NAME="fsxZ-SecurityGroup"
-                REGION={{ RegionName }}
+                REGION={{ PrimaryRegion }}
                 
                 echo "Deleting $STACK_NAME stack in $REGION"
                 
@@ -2959,7 +2973,8 @@ Resources:
       PublicSubnet02: !Ref PublicSubnet2
       PrivateSubnet01: !Ref PrivateSubnet1
       PrivateSubnet02: !Ref PrivateSubnet2
-      RegionName: !Sub "${AWS::Region}"
+      PrimaryRegion: !Sub "${AWS::Region}"
+      SecondaryRegion: !Ref SecondaryRegion
        
   CreateSecondaryRegionEKSCluster:
     Type: AWS::SSM::Document
@@ -2990,9 +3005,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command     
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command          
         mainSteps:
         - action: aws:runShellScript
           name: CreateSecondaryRegionEKSCluster
@@ -3002,7 +3020,7 @@ Resources:
                 #!/bin/bash
                 
                 CLUSTER_NAME="FSx-eks-cluster02"
-                REGION=us-east-2
+                REGION={{ SecondaryRegion }}
                 
                 echo "Creating $CLUSTER_NAME in $REGION"
                 
@@ -3037,25 +3055,24 @@ Resources:
                 # Create Security Groups for FSx for Lustre
                 
                 STACK_NAME="FSxL-SecurityGroup-02"
-                REGION=us-east-2
+                REGION={{ SecondaryRegion }}
                 CLUSTER_NAME="FSx-eks-cluster02"  # Ensure this matches the cluster name from the previous step
                 
                 # Get VPC ID from EKS cluster
                 VPC_ID=$(aws eks describe-cluster --name $CLUSTER_NAME --region "$REGION" --query "cluster.resourcesVpcConfig.vpcId" --output text)
                 
-                echo "Creating Security Groups for FSx for Lustre in region $REGION"
+                echo "Creating Security Groups for FSx for Lustre in region $REGION in VPC $VPC_ID"
                 
                 cd /home/${VSCodeUser}/environment/eks-fsx-workshop/static/FSxCFN
-                
-                # Replace VPC ID in the template
-                sed -i "s/myVpc/$VPC_ID/g" fsxL-SecurityGroup.yaml
-                
+                                
                 # Create CloudFormation stack
                 aws cloudformation create-stack \
                   --stack-name "$STACK_NAME" \
                   --region "$REGION" \
                   --template-body file://./fsxL-SecurityGroup.yaml \
-                  --parameters ParameterKey=SecurityGroupName,ParameterValue=FSxLSecurityGroup02 \
+                  --parameters \
+                  ParameterKey=VpcId,ParameterValue=$VPC_ID \
+                  ParameterKey=SecurityGroupName,ParameterValue=FSxLSecurityGroup02 \
                   --capabilities CAPABILITY_NAMED_IAM
                 
                 echo "Security group creation initiated for FSx for Lustre in $REGION"
@@ -3075,7 +3092,7 @@ Resources:
                 # In future To migrate on Pod Identity - currently fsx-csi-controller is not supporting it
                 policy_name="Amazon_2nd_FSx_Lustre_CSI_Driver"
                 CLUSTER_NAME="FSx-eks-cluster02"  # Ensure this matches the cluster name from the previous steps
-                REGION=us-east-2
+                REGION={{ SecondaryRegion }}
                 
                 # Check if policy exists
                 policy_arn=$(aws iam list-policies --output json | jq -r --arg name "$policy_name" '.Policies[] | select(.PolicyName == $name) | .Arn')
@@ -3112,7 +3129,7 @@ Resources:
                 #!/bin/bash
                 
                 CLUSTER_NAME="FSx-eks-cluster02"
-                REGION=us-east-2
+                REGION={{ SecondaryRegion }}
                 
                 echo "Setting up EKS Pod Identity for cluster $CLUSTER_NAME in $REGION"
                 
@@ -3177,9 +3194,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command       
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command        
         mainSteps:
         - action: aws:runShellScript
           name: CleanupSecondaryRegionResources
@@ -3189,7 +3209,7 @@ Resources:
                 #!/bin/bash
                 
                 CLUSTER_NAME="FSx-eks-cluster02"
-                REGION=us-east-2
+                REGION={{ SecondaryRegion }}
                 
                 # Delete EKS Cluster
                 echo "Deleting $CLUSTER_NAME in $REGION"
@@ -3248,7 +3268,8 @@ Resources:
       PublicSubnet02: !Ref PublicSubnet2
       PrivateSubnet01: !Ref PrivateSubnet1
       PrivateSubnet02: !Ref PrivateSubnet2
-      RegionName: !Sub "${AWS::Region}"
+      PrimaryRegion: !Sub "${AWS::Region}"
+      SecondaryRegion: !Ref SecondaryRegion
        
   SetupFSxLustreStorageForSecondaryEKS:
     Type: AWS::SSM::Document
@@ -3279,9 +3300,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command       
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command        
         mainSteps:
         - action: aws:runShellScript
           name: SetupFSxLustreStorageForSecondaryEKS
@@ -3293,7 +3317,7 @@ Resources:
                 cd /home/${VSCodeUser}/environment/eks-fsx-workshop/static/eks/FSxL
                 
                 CLUSTER_NAME="FSx-eks-cluster02"
-                REGION=us-east-2
+                REGION={{ SecondaryRegion }}
                 
                 echo "Retrieving necessary information..."
                 SECURITY_GROUP_ID=$(aws cloudformation describe-stacks --stack-name FSxL-SecurityGroup-02 --region $REGION --query "Stacks[0].Outputs[0].OutputValue" --output text)
@@ -3367,9 +3391,12 @@ Resources:
           VPCIdentifier:
             type: String
             description: VPC ID
-          RegionName:
+          PrimaryRegion:
             type: String
-            description: Region Name to run the command             
+            description: Primary Region Name to run the command  
+          SecondaryRegion:
+            type: String
+            description: Secondary Region Name to run the command  
         mainSteps:
         - action: aws:runShellScript
           name: CleanupFSxLustreStorageForSecondaryEKS
@@ -3381,7 +3408,7 @@ Resources:
                 cd /home/${VSCodeUser}/environment/eks-fsx-workshop/static/eks/FSxL
                 
                 CLUSTER_NAME="FSx-eks-cluster02"
-                REGION=us-east-2
+                REGION={{ SecondaryRegion }}
                 
                 echo "Updating kubeconfig for cluster $CLUSTER_NAME"
                 aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION

@@ -69,9 +69,15 @@ You will be using the Open source VSCode IDE terminal to copy and paste commands
 
 ![maximize](/static/images/maximize.png)
 
+:::alert{header="Note" type="info"}
+When you first time copy-paste a command on VSCode IDE, your browser may ask you to allow permission to see informaiton on clipboard. Please select **"Allow"**.
+
+![allow-clipboard](/static/images/allow-clipboard.png)
+:::
+
 - Replace `<region name>` with your lab region name as shared by your workshop operator. 
 
-::code[export PRIMARY_REGION=<region name>]{language=bash showLineNumbers=false showCopyAction=true}
+::code[export PRIMARY_REGION=$AWS_REGION]{language=bash showLineNumbers=false showCopyAction=true}
 
 ::code[export SECONDARY_REGION=us-east-2]{language=bash showLineNumbers=false showCopyAction=true}
 

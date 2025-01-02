@@ -103,6 +103,11 @@ You will be using the Open source VSCode IDE terminal to copy and paste commands
 
 ![maximize](/static/images/maximize.png)
 
+:::alert{header="Note" type="info"}
+When you first time copy-paste a command on VSCode IDE, your browser may ask you to allow permission to see informaiton on clipboard. Please select **"Allow"**.
+
+![allow-clipboard](/static/images/allow-clipboard.png)
+:::
 
 - Set cluster variables : 
 
