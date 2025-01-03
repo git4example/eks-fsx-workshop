@@ -92,10 +92,10 @@ export SECONDARY_CLUSTER_NAME=FSx-eks-cluster02
 - Check if region and cluster names are set correctly
 
 :::code[]{language=bash showLineNumbers=true showCopyAction=true}
-echo $PRIMARY_REGION
-echo $SECONDARY_REGION
-echo $PRIMARY_CLUSTER_NAME
-echo $SECONDARY_CLUSTER_NAME
+echo "PRIMARY_REGION        :" $PRIMARY_REGION
+echo "SECONDARY_REGION      :" $SECONDARY_REGION
+echo "PRIMARY_CLUSTER_NAME  :" $PRIMARY_CLUSTER_NAME
+echo "SECONDARY_CLUSTER_NAME:" $SECONDARY_CLUSTER_NAME
 :::
 
 ## Update the kube-config file:

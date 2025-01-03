@@ -171,23 +171,25 @@ git clone https://github.com/aws-samples/eks-fsx-workshop.git
 
 There are two folders that you need to reference in the following steps, with the “eks” folder containing all manifests files related to the eks cluster resources and “FSxCFN” Cloudformation templates for spinning up the VPC, FSx File Systems, EKS Clusters ..etc.
 
-```bash
-cd eks-fsx-workshop
-```
-
 ### Part 3 : Provision workshop resources
 
 #### Upload template to S3
 Upload AWS CloudFormation template to your bucket in order to validate template before stack creation. Please replace **YOUR_BUCKET_NAME** in following command.
 
 ```bash
-export BUCKET_NAME=YOUR_BUCKET_NAME
-aws s3 cp ./static/FSXWorkshopOnEKS.yaml s3://$BUCKET_NAME/FSXWorkshopOnEKS.yaml
+ASSET_BUCKET=YOUR_BUCKET_NAME
+ASSET_BUCKET_PATH=eks-fsx-workshop
 ```
 
-#### Validate template
 ```bash
-aws cloudformation validate-template --template-url https://$BUCKET_NAME.s3.amazonaws.com/FSXWorkshopOnEKS.yaml]{language=bash showLineNumbers=false showCopyAction=true}
+aws s3 sync ./eks-fsx-workshop s3://${ASSET_BUCKET}/${ASSET_BUCKET_PATH}
+```
+
+
+#### Validate template
+
+```bash
+aws cloudformation validate-template --template-url https://${ASSET_BUCKET}.s3.amazonaws.com/${ASSET_BUCKET_PATH}/static/FSXWorkshopOnEKS.yaml
 ```
 
 #### Create stack
@@ -208,7 +210,7 @@ This may take upto 60 mins :
 ```bash
 aws cloudformation create-stack \
   --stack-name ${STACK_NAME} \
-  --template-url https://$BUCKET_NAME.s3.amazonaws.com/FSXWorkshopOnEKS.yaml \
+  --template-url https://${ASSET_BUCKET}.s3.amazonaws.com/${ASSET_BUCKET_PATH}/static/FSXWorkshopOnEKS.yaml \
   --region $PRIMARY_REGION \
   --parameters \
   ParameterKey=VSCodeUser,ParameterValue=participant \
@@ -219,8 +221,6 @@ aws cloudformation create-stack \
   ParameterKey=HomeFolder,ParameterValue=environment \
   ParameterKey=DevServerPort,ParameterValue=8081 \
   ParameterKey=AssetZipS3Path,ParameterValue=${ASSET_BUCKET_ZIPPATH} \
-  ParameterKey=BranchZipS3Path,ParameterValue="" \
-  ParameterKey=FolderZipS3Path,ParameterValue="" \
   ParameterKey=SecondaryRegion,ParameterValue=${SECONDARY_REGION} \
   --disable-rollback \
   --capabilities CAPABILITY_NAMED_IAM
@@ -255,6 +255,11 @@ You will be using the Open source VSCode IDE terminal to copy and paste commands
 
 ![maximize](/static/images/maximize.png)
 
+### Note: 
+When you first time copy-paste a command on VSCode IDE, your browser may ask you to allow permission to see informaiton on clipboard. Please select **"Allow"**.
+
+![allow-clipboard](/static/images/allow-clipboard.png)
+
 
 - Set cluster variables : 
 
@@ -266,10 +271,10 @@ export SECONDARY_CLUSTER_NAME=FSx-eks-cluster02
 - Check if region and cluster names are set correctly
 
 ```bash
-echo $PRIMARY_REGION
-echo $SECONDARY_REGION
-echo $PRIMARY_CLUSTER_NAME
-echo $SECONDARY_CLUSTER_NAME
+echo "PRIMARY_REGION        :" $PRIMARY_REGION
+echo "SECONDARY_REGION      :" $SECONDARY_REGION
+echo "PRIMARY_CLUSTER_NAME  :" $PRIMARY_CLUSTER_NAME
+echo "SECONDARY_CLUSTER_NAME:" $SECONDARY_CLUSTER_NAME
 ```
 
 ## Update the kube-config file:
@@ -308,3 +313,4 @@ aws cloudformation delete-stack --stack-name ${STACK_NAME} --region PRIMARY_REGI
 # Wait for stack deletion to complete
 aws cloudformation wait stack-delete-complete --stack-name ${STACK_NAME} --region PRIMARY_REGION
 ```
+
