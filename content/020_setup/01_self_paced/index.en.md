@@ -92,7 +92,7 @@ Ref : [code-server](https://github.com/coder/code-server)
 
 You will be using the Open source VSCode IDE terminal to copy and paste commands that are provided in this workshop. 
 
-::alert[Note: Please use google chrome browser for best user experience. Firefox may experience some issues while copy-paste commands.]{header="Important" type="warning"}
+### Note: Please use google chrome browser for best user experience. Firefox may experience some issues while copy-paste commands.
 
 1. Go to Cloud formation console [link](https://console.aws.amazon.com/cloudformation) and select `genaifsxworkshoponeks` stack 
 2. Go to Stack **Outputs**
@@ -110,8 +110,7 @@ You will be using the Open source VSCode IDE terminal to copy and paste commands
 
 ![maximize](/static/images/maximize.png)
 
-### Note: 
-When you first time copy-paste a command on VSCode IDE, your browser may ask you to allow permission to see informaiton on clipboard. Please select **"Allow"**.
+### Note: When you first time copy-paste a command on VSCode IDE, your browser may ask you to allow permission to see informaiton on clipboard. Please select **"Allow"**.
 
 ![allow-clipboard](/static/images/allow-clipboard.png)
 
